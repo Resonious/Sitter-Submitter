@@ -1,12 +1,14 @@
 package dev.baillie.sittersubmitter.ui.home
 
 import android.content.ContentResolver
+import android.content.SharedPreferences
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.baillie.sittersubmitter.data.db.ReceiptDetailEntity
 import dev.baillie.sittersubmitter.data.db.ReceiptEntity
+import dev.baillie.sittersubmitter.data.db.ReceiptWithDetails
 import dev.baillie.sittersubmitter.data.repository.ReceiptRepository
 import dev.baillie.sittersubmitter.domain.pdf.PdfParser
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +23,7 @@ import kotlinx.coroutines.withContext
 data class HomeUiState(
     val years: List<YearData> = emptyList(),
     val selectedReceiptIds: Set<Int> = emptySet(),
+    val familyName: String = "",
     val isGenerating: Boolean = false,
     val error: String? = null
 )
@@ -32,32 +35,57 @@ data class YearData(
 
 data class MonthData(
     val month: Int,
-    val receipts: List<ReceiptEntity>
+    val receipts: List<ReceiptDisplayItem>
+)
+
+data class ReceiptDisplayItem(
+    val id: Int,
+    val amount: Int,
+    val sitterNames: String,
+    val childNames: String,
+    val originalFileName: String
 )
 
 class HomeViewModel(
     private val receiptRepository: ReceiptRepository,
     private val pdfParser: PdfParser,
-    private val contentResolver: ContentResolver
+    private val contentResolver: ContentResolver,
+    private val sharedPreferences: SharedPreferences
 ) : ViewModel() {
+
+    companion object {
+        private const val KEY_FAMILY_NAME = "family_name"
+    }
 
     private val _selectedReceiptIds = MutableStateFlow<Set<Int>>(emptySet())
     private val _error = MutableStateFlow<String?>(null)
     private val _isGenerating = MutableStateFlow(false)
+    private val _familyName = MutableStateFlow(sharedPreferences.getString(KEY_FAMILY_NAME, "") ?: "")
 
     val uiState: StateFlow<HomeUiState> = combine(
         receiptRepository.getAllReceipts(),
         _selectedReceiptIds,
         _error,
-        _isGenerating
-    ) { receipts, selected, error, isGenerating ->
-        val grouped = receipts.groupBy { it.year }
-            .map { (year, yearReceipts) ->
+        _isGenerating,
+        _familyName
+    ) { receiptsWithDetails, selected, error, isGenerating, familyName ->
+        val displayItems = receiptsWithDetails.map { rwd ->
+            ReceiptDisplayItem(
+                id = rwd.receipt.id,
+                amount = rwd.receipt.amount,
+                sitterNames = rwd.details.map { it.sitterName }.distinct().joinToString(", "),
+                childNames = rwd.details.map { it.childName }.distinct().joinToString(", "),
+                originalFileName = rwd.receipt.originalFileName
+            ) to rwd.receipt
+        }
+
+        val grouped = displayItems.groupBy { it.second.year }
+            .map { (year, yearItems) ->
                 YearData(
                     year = year,
-                    months = yearReceipts.groupBy { it.month }
-                        .map { (month, monthReceipts) ->
-                            MonthData(month, monthReceipts)
+                    months = yearItems.groupBy { it.second.month }
+                        .map { (month, monthItems) ->
+                            MonthData(month, monthItems.map { it.first })
                         }
                         .sortedByDescending { it.month }
                 )
@@ -67,6 +95,7 @@ class HomeViewModel(
         HomeUiState(
             years = grouped,
             selectedReceiptIds = selected,
+            familyName = familyName,
             error = error,
             isGenerating = isGenerating
         )
@@ -84,6 +113,11 @@ class HomeViewModel(
     
     fun clearSelection() {
         _selectedReceiptIds.value = emptySet()
+    }
+
+    fun setFamilyName(name: String) {
+        _familyName.value = name
+        sharedPreferences.edit().putString(KEY_FAMILY_NAME, name).apply()
     }
 
     fun addReceipt(uri: Uri) {
@@ -140,6 +174,7 @@ class HomeViewModel(
                             startTime = it.startTime,
                             endTime = it.endTime,
                             sitterName = it.sitterName,
+                            childName = it.childName,
                             amount = it.amount
                         )
                     }
@@ -181,8 +216,16 @@ class HomeViewModel(
     }
 
     fun deleteSelected() {
-         viewModelScope.launch {
-             // Implementation for delete
-         }
+        viewModelScope.launch {
+            try {
+                val idsToDelete = _selectedReceiptIds.value.toList()
+                if (idsToDelete.isNotEmpty()) {
+                    receiptRepository.deleteReceiptsByIds(idsToDelete)
+                    _selectedReceiptIds.value = emptySet()
+                }
+            } catch (e: Exception) {
+                _error.value = "Error deleting receipts: ${e.message}"
+            }
+        }
     }
 }

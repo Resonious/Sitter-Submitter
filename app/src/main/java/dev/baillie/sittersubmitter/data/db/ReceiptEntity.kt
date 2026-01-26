@@ -11,7 +11,7 @@ data class ReceiptEntity(
     val month: Int, // 1-12
     val day: Int,
     val amount: Int,
-    val sitterName: String, // e.g., "Poppins"
+    val sitterName: String,
     val originalFileName: String,
     val createdAt: Long = System.currentTimeMillis()
 )

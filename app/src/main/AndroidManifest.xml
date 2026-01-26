@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".SitterSubmitterApplication"
         android:allowBackup="true"
@@ -31,6 +33,12 @@
                 <data android:mimeType="application/pdf" />
                 <data android:scheme="content" />
                 <data android:scheme="file" />
+            </intent-filter>
+            <!-- Intent filter for receiving shared PDFs -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
             </intent-filter>
         </activity>
         

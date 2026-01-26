@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import dev.baillie.sittersubmitter.data.db.ReceiptDao
 import dev.baillie.sittersubmitter.data.db.ReceiptEntity
+import dev.baillie.sittersubmitter.data.db.ReceiptWithDetails
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -16,7 +17,7 @@ class ReceiptRepository(
     private val receiptDao: ReceiptDao,
     private val context: Context
 ) {
-    fun getAllReceipts(): Flow<List<ReceiptEntity>> = receiptDao.getAllReceipts()
+    fun getAllReceipts(): Flow<List<ReceiptWithDetails>> = receiptDao.getAllReceipts()
 
     suspend fun addReceiptWithDetails(
         uri: Uri,
@@ -30,7 +31,7 @@ class ReceiptRepository(
         withContext(Dispatchers.IO) {
             val fileName = "receipt_${UUID.randomUUID()}.pdf"
             val file = File(context.filesDir, fileName)
-            
+
             context.contentResolver.openInputStream(uri)?.use { input ->
                 file.outputStream().use { output ->
                     input.copyTo(output)
@@ -46,9 +47,9 @@ class ReceiptRepository(
                 sitterName = sitterName,
                 originalFileName = originalFileName
             )
-            
+
             val receiptId = receiptDao.insertReceipt(entity).toInt()
-            
+
             val detailsWithId = details.map { it.copy(receiptId = receiptId) }
             receiptDao.insertReceiptDetails(detailsWithId)
         }
@@ -70,5 +71,20 @@ class ReceiptRepository(
 
     suspend fun getDetailsForReceipt(receiptId: Int): List<ReceiptDetailEntity> {
         return receiptDao.getDetailsForReceipt(receiptId)
+    }
+
+    suspend fun deleteReceiptsByIds(ids: List<Int>) {
+        withContext(Dispatchers.IO) {
+            // Get receipts to delete their PDF files
+            val receipts = receiptDao.getReceiptsByIds(ids)
+            for (receipt in receipts) {
+                val file = File(receipt.localPath)
+                if (file.exists()) {
+                    file.delete()
+                }
+            }
+            // Delete from DB (cascade will delete details)
+            receiptDao.deleteReceiptsByIds(ids)
+        }
     }
 }

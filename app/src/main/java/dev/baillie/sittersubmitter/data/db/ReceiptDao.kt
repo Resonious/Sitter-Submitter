@@ -9,8 +9,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReceiptDao {
+    @Transaction
     @Query("SELECT * FROM receipts ORDER BY year DESC, month DESC, day DESC")
-    fun getAllReceipts(): Flow<List<ReceiptEntity>>
+    fun getAllReceipts(): Flow<List<ReceiptWithDetails>>
 
     @Query("SELECT * FROM receipts WHERE year = :year AND month = :month ORDER BY day DESC")
     fun getReceiptsForMonth(year: Int, month: Int): Flow<List<ReceiptEntity>>
@@ -23,6 +24,9 @@ interface ReceiptDao {
     
     @Query("SELECT * FROM receipts WHERE id IN (:ids)")
     suspend fun getReceiptsByIds(ids: List<Int>): List<ReceiptEntity>
+
+    @Query("DELETE FROM receipts WHERE id IN (:ids)")
+    suspend fun deleteReceiptsByIds(ids: List<Int>)
 
     @Insert
     suspend fun insertReceiptDetails(details: List<ReceiptDetailEntity>)

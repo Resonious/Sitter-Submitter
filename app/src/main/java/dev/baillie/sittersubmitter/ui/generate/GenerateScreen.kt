@@ -27,7 +27,6 @@ fun GenerateScreen(
 
     LaunchedEffect(uiState.generatedFile) {
         uiState.generatedFile?.let { file ->
-            // Open file intent
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -47,50 +46,66 @@ fun GenerateScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
-            Button(
-                onClick = { 
-                    viewModel.generateReport(context.externalCacheDir ?: context.cacheDir) 
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                enabled = !uiState.isLoading && uiState.details.isNotEmpty()
-            ) {
-                Text(if (uiState.isLoading) "Generating..." else "Generate XLSX")
-            }
         }
     ) { innerPadding ->
-        if (uiState.isLoading && uiState.details.isEmpty()) {
+        if (uiState.isLoading && uiState.children.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {
-            Column(modifier = Modifier.padding(innerPadding)) {
-                Text(
-                    text = "Total Amount: ¥${uiState.totalAmount}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(16.dp)
-                )
-                
-                Text(
-                    text = "Details included:",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+            LazyColumn(
+                modifier = Modifier.padding(innerPadding),
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                items(uiState.children) { childData ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = childData.childName,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Text(
+                                text = "${childData.details.size} sessions • ¥${childData.totalAmount}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(16.dp)
-                ) {
-                    items(uiState.details) { detail ->
-                        ListItem(
-                            headlineContent = { Text("${detail.year}/${detail.month}/${detail.day}") },
-                            supportingContent = { Text("${detail.startTime} - ${detail.endTime}") },
-                            trailingContent = { Text("¥${detail.amount}") }
-                        )
-                        HorizontalDivider()
+                            childData.details.take(3).forEach { detail ->
+                                Text(
+                                    text = "${detail.year}/${detail.month}/${detail.day} ${detail.startTime}-${detail.endTime}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            if (childData.details.size > 3) {
+                                Text(
+                                    text = "... and ${childData.details.size - 3} more",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = {
+                                    viewModel.generateReportForChild(
+                                        childData.childName,
+                                        context.externalCacheDir ?: context.cacheDir
+                                    )
+                                },
+                                enabled = !uiState.isLoading,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    if (uiState.isLoading) "Generating..."
+                                    else "Generate XLSX for ${childData.childName}"
+                                )
+                            }
+                        }
                     }
                 }
             }

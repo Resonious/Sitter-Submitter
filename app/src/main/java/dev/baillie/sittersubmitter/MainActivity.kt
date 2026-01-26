@@ -26,8 +26,16 @@ import dev.baillie.sittersubmitter.ui.home.HomeViewModel
 import dev.baillie.sittersubmitter.ui.theme.SitterSubmitterTheme
 
 class MainActivity : ComponentActivity() {
+    private var pendingPdfUri: Uri? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Only capture URI on fresh launch, not on recreation
+        if (savedInstanceState == null) {
+            pendingPdfUri = extractPdfUri(intent)
+        }
+
         enableEdgeToEdge()
         setContent {
             SitterSubmitterTheme {
@@ -35,34 +43,48 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    SitterApp(intent = intent)
+                    SitterApp(
+                        pendingPdfUri = pendingPdfUri,
+                        onPdfConsumed = { pendingPdfUri = null }
+                    )
                 }
             }
+        }
+    }
+
+    private fun extractPdfUri(intent: Intent?): Uri? {
+        if (intent == null) return null
+
+        return when (intent.action) {
+            Intent.ACTION_VIEW -> {
+                if (intent.type == "application/pdf") intent.data else null
+            }
+            Intent.ACTION_SEND -> {
+                if (intent.type == "application/pdf") {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                } else null
+            }
+            else -> null
         }
     }
 }
 
 @Composable
 fun SitterApp(
-    intent: Intent?
+    pendingPdfUri: Uri?,
+    onPdfConsumed: () -> Unit
 ) {
     val navController = rememberNavController()
-    // We need access to HomeViewModel to add receipt from Intent
-    // But HomeViewModel is scoped to HomeScreen usually.
-    // However, if we enter via Intent, we want to add it then go to Home.
-    // Let's rely on HomeViewModel being the start destination.
 
     NavHost(navController = navController, startDestination = "home") {
         composable("home") {
             val homeViewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
-            
-            // Handle Intent
-            LaunchedEffect(intent) {
-                if (intent?.action == Intent.ACTION_VIEW && intent.type == "application/pdf") {
-                    val uri = intent.data
-                    if (uri != null) {
-                        homeViewModel.addReceipt(uri)
-                    }
+
+            // Handle pending PDF URI once
+            LaunchedEffect(pendingPdfUri) {
+                if (pendingPdfUri != null) {
+                    homeViewModel.addReceipt(pendingPdfUri)
+                    onPdfConsumed()
                 }
             }
 
@@ -73,7 +95,7 @@ fun SitterApp(
                 }
             )
         }
-        
+
         composable(
             "generate/{ids}",
             arguments = listOf(navArgument("ids") { type = NavType.StringType })

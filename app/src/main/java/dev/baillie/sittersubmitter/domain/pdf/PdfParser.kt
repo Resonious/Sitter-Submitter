@@ -1,12 +1,18 @@
 package dev.baillie.sittersubmitter.domain.pdf
 
-import com.tom_roush.pdfbox.pdmodel.PDDocument
-import com.tom_roush.pdfbox.text.PDFTextStripper
+import android.util.Base64
+import android.util.Log
+import com.google.gson.Gson
+import dev.baillie.sittersubmitter.BuildConfig
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.io.InputStream
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.regex.Pattern
+import java.util.concurrent.TimeUnit
 
 data class ParsedReceipt(
     val year: Int,
@@ -21,117 +27,181 @@ data class ParsedReceiptDetail(
     val startTime: String,
     val endTime: String,
     val sitterName: String,
+    val childName: String,
     val amount: Int
 )
 
 class PdfParser {
 
+    companion object {
+        private const val TAG = "PdfParser"
+        private const val OPENAI_API_URL = "https://api.openai.com/v1/responses"
+    }
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
+        .writeTimeout(120, TimeUnit.SECONDS)
+        .build()
+
+    private val gson = Gson()
+
     fun parse(inputStream: InputStream): ParsedReceipt {
-        val document = PDDocument.load(inputStream)
-        return try {
-            val stripper = PDFTextStripper()
-            stripper.sortByPosition = true
-            val text = stripper.getText(document)
-            parseText(text)
-        } finally {
-            document.close()
-        }
+        val pdfBytes = inputStream.readBytes()
+        return parseWithOpenAI(pdfBytes)
     }
-    
+
     fun parse(file: File): ParsedReceipt {
-        val document = PDDocument.load(file)
-        return try {
-            val stripper = PDFTextStripper()
-            stripper.sortByPosition = true
-            val text = stripper.getText(document)
-            parseText(text)
-        } finally {
-            document.close()
-        }
+        val pdfBytes = file.readBytes()
+        return parseWithOpenAI(pdfBytes)
     }
 
-    private fun parseText(text: String): ParsedReceipt {
-        val details = mutableListOf<ParsedReceiptDetail>()
-        val lines = text.split("\n")
-        
-        // Regex for date: YYYY/MM/DD
-        // Example: 2024/12/06 18:45 19:45 SitterName ... Amount
-        // Adjust regex to capture components
-        // Note: Sitter name might contain spaces (Japanese names often have space between surname and name).
-        // The columns seem to be: Date, Start, End, Sitter, Child, Fee, ... Total
-        
-        // Simple strategy: Find line starting with date. Split by whitespace.
-        // Assuming dates are YYYY/MM/DD
-        val datePattern = Pattern.compile("^(\\d{4})/(\\d{1,2})/(\\d{1,2})")
-        
-        for (line in lines) {
-            val trimmedLine = line.trim()
-            val matcher = datePattern.matcher(trimmedLine)
-            if (matcher.find()) {
-                try {
-                    val parts = trimmedLine.split("\\s+".toRegex())
-                    if (parts.size >= 4) { // Date, Start, End, Sitter...
-                        val dateStr = parts[0]
-                        val start = parts[1]
-                        val end = parts[2]
-                        // Sitter name might be parts[3] or parts[3]+parts[4]
-                        // Let's assume sitter name is the next token(s) until we hit a number or known structure?
-                        // Or just take parts[3].
-                        // In the image: "蜜本 沙希" (2 parts) or "蜜本沙希" (1 part)?
-                        // "蜜本 沙希 穂 杏" -> Sitter name, Child name...
-                        // The last column is the amount? "3,620"
-                        // Amount is usually at the end.
-                        
-                        // Let's look for the amount at the end.
-                        val amountStr = parts.last().replace(",", "").replace("円", "")
-                        val amount = amountStr.toIntOrNull() ?: 0
-                        
-                        val year = matcher.group(1)!!.toInt()
-                        val month = matcher.group(2)!!.toInt()
-                        val day = matcher.group(3)!!.toInt()
-                        
-                        // Heuristic for sitter name: parts between EndTime and next Number?
-                        // Actually, looking at image: 
-                        // Col 4: Sitter Name.
-                        // Col 5: Child Name.
-                        // Col 6: Fee (number).
-                        // So Sitter Name is likely just one or two tokens after EndTime.
-                        // Let's take parts[3]. If parts[4] is not a number, maybe append?
-                        // For now, take parts[3].
-                        
-                        val sitterName = parts[3]
+    private fun parseWithOpenAI(pdfBytes: ByteArray): ParsedReceipt {
+        val base64Pdf = Base64.encodeToString(pdfBytes, Base64.NO_WRAP)
 
-                        details.add(
-                            ParsedReceiptDetail(
-                                year = year,
-                                month = month,
-                                day = day,
-                                startTime = start,
-                                endTime = end,
-                                sitterName = sitterName,
-                                amount = amount
-                            )
+        val prompt = """
+Analyze this Japanese babysitter receipt PDF table. Each row represents one babysitting session.
+
+The table columns are: ご利用日 | 開始時刻 | 終了時刻 | シッター名 | お子さま | 保育料... | お支払い額
+
+For each data row, extract:
+- date: from ご利用日 column (YYYY/MM/DD format)
+- startTime: from 開始時刻 column (HH:MM format)
+- endTime: from 終了時刻 column (HH:MM format)
+- sitterName: from シッター名 column (full name)
+- childName: from お子さま column - this contains the child's name followed by 様 and age in parentheses. Extract ONLY the single character or short name before 様. For example if the cell shows "杏 様 (0歳6ヶ月)" extract just "杏". Do NOT include 様, age, or any text from adjacent columns.
+- amount: from お支払い額 column (rightmost, integer, no commas)
+
+Return JSON: {"entries":[{"date":"YYYY/MM/DD","startTime":"HH:MM","endTime":"HH:MM","sitterName":"Name","childName":"Child","amount":1234}]}
+        """.trim()
+
+        // Build request JSON for Responses API (supports PDFs natively)
+        val requestJson = JsonObject().apply {
+            addProperty("model", "gpt-4o")
+            add("input", gson.toJsonTree(listOf(
+                mapOf(
+                    "role" to "user",
+                    "content" to listOf(
+                        mapOf(
+                            "type" to "input_text",
+                            "text" to prompt
+                        ),
+                        mapOf(
+                            "type" to "input_file",
+                            "filename" to "receipt.pdf",
+                            "file_data" to "data:application/pdf;base64,$base64Pdf"
                         )
+                    )
+                )
+            )))
+        }
+
+        val jsonBody = gson.toJson(requestJson)
+        Log.d(TAG, "Sending request to OpenAI API...")
+
+        val request = Request.Builder()
+            .url(OPENAI_API_URL)
+            .addHeader("Authorization", "Bearer ${BuildConfig.OPENAI_API_KEY}")
+            .addHeader("Content-Type", "application/json")
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            .build()
+
+        val response = client.newCall(request).execute()
+
+        val responseBody = response.body?.string()
+            ?: throw RuntimeException("Empty response from OpenAI API")
+
+        Log.d(TAG, "Response code: ${response.code}")
+
+        if (!response.isSuccessful) {
+            Log.e(TAG, "API Error: $responseBody")
+            throw RuntimeException("OpenAI API error: ${response.code} - $responseBody")
+        }
+
+        Log.d(TAG, "Response body: $responseBody")
+
+        // Parse response JSON manually to extract text content
+        val responseJson = JsonParser.parseString(responseBody).asJsonObject
+        var content: String? = null
+
+        // Navigate: output[] -> find message type -> content[] -> find output_text -> text
+        val output = responseJson.getAsJsonArray("output")
+        for (outputItem in output) {
+            val item = outputItem.asJsonObject
+            if (item.get("type")?.asString == "message") {
+                val contentArray = item.getAsJsonArray("content")
+                for (contentItem in contentArray) {
+                    val cItem = contentItem.asJsonObject
+                    if (cItem.get("type")?.asString == "output_text") {
+                        content = cItem.get("text")?.asString
+                        break
                     }
-                } catch (e: Exception) {
-                    // Log error or ignore line
-                    e.printStackTrace()
                 }
             }
+            if (content != null) break
         }
-        
-        // Determine overall year/month from details (use the first one or majority)
-        if (details.isEmpty()) {
+
+        if (content == null) {
+            throw RuntimeException("No content in OpenAI response: $responseBody")
+        }
+
+        Log.d(TAG, "GPT content: $content")
+
+        // Extract JSON from response
+        content = extractJson(content)
+
+        Log.d(TAG, "Cleaned content: $content")
+
+        // Parse the JSON response from GPT
+        val extractedData = gson.fromJson(content, ExtractedReceiptData::class.java)
+
+        if (extractedData.entries.isEmpty()) {
             throw IllegalArgumentException("No valid receipt entries found in PDF.")
         }
-        
-        // Use the first entry's month/year as the receipt's "Month"
+
+        val details = extractedData.entries.map { entry ->
+            val dateParts = entry.date.split("/")
+            ParsedReceiptDetail(
+                year = dateParts[0].toInt(),
+                month = dateParts[1].toInt(),
+                day = dateParts[2].toInt(),
+                startTime = entry.startTime,
+                endTime = entry.endTime,
+                sitterName = entry.sitterName,
+                childName = entry.childName,
+                amount = entry.amount
+            )
+        }
+
         val first = details[0]
-        
         return ParsedReceipt(
             year = first.year,
             month = first.month,
             details = details
         )
     }
+
+    private fun extractJson(content: String): String {
+        val start = content.indexOf('{')
+        val end = content.lastIndexOf('}')
+        if (start == -1 || end == -1 || end <= start) {
+            throw IllegalArgumentException("No valid JSON object found in response: $content")
+        }
+        return content.substring(start, end + 1)
+    }
+
+    // Response data models
+
+    private data class ExtractedReceiptData(
+        val entries: List<ExtractedEntry>
+    )
+
+    private data class ExtractedEntry(
+        val date: String,
+        val startTime: String,
+        val endTime: String,
+        val sitterName: String,
+        val childName: String,
+        val amount: Int
+    )
 }

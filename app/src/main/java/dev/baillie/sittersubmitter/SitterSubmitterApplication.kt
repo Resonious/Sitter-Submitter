@@ -2,7 +2,6 @@ package dev.baillie.sittersubmitter
 
 import android.app.Application
 import androidx.room.Room
-import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import dev.baillie.sittersubmitter.data.db.AppDatabase
 import dev.baillie.sittersubmitter.data.repository.ReceiptRepository
 import dev.baillie.sittersubmitter.domain.pdf.PdfParser
@@ -14,7 +13,6 @@ class SitterSubmitterApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        PDFBoxResourceLoader.init(applicationContext)
         System.setProperty("org.apache.poi.javax.xml.stream.XMLInputFactory", "com.fasterxml.aalto.stax.InputFactoryImpl")
         System.setProperty("org.apache.poi.javax.xml.stream.XMLOutputFactory", "com.fasterxml.aalto.stax.OutputFactoryImpl")
         System.setProperty("org.apache.poi.javax.xml.stream.XMLEventFactory", "com.fasterxml.aalto.stax.EventFactoryImpl")
@@ -27,7 +25,7 @@ class AppContainer(context: android.content.Context) {
     val database = Room.databaseBuilder(
         context,
         AppDatabase::class.java, "sitter-submitter-db"
-    ).build()
+    ).fallbackToDestructiveMigration().build()
     
     val receiptRepository = ReceiptRepository(database.receiptDao(), context)
     val pdfParser = PdfParser()

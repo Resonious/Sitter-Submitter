@@ -25,5 +25,6 @@ data class ReceiptDetailEntity(
     val startTime: String,
     val endTime: String,
     val sitterName: String,
+    val childName: String = "",
     val amount: Int
 )

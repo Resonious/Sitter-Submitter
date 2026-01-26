@@ -1,6 +1,7 @@
 package dev.baillie.sittersubmitter.ui.home
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +23,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.baillie.sittersubmitter.data.db.ReceiptEntity
 import dev.baillie.sittersubmitter.ui.AppViewModelProvider
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -41,10 +42,27 @@ fun HomeScreen(
         }
     )
 
+    BackHandler(enabled = uiState.selectedReceiptIds.isNotEmpty()) {
+        viewModel.clearSelection()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sitter Submitter") }
+                title = {
+                    if (uiState.selectedReceiptIds.isNotEmpty()) {
+                        Text("${uiState.selectedReceiptIds.size} selected")
+                    } else {
+                        Text("Sitter Submitter")
+                    }
+                },
+                actions = {
+                    if (uiState.selectedReceiptIds.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.deleteSelected() }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete selected")
+                        }
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -63,19 +81,30 @@ fun HomeScreen(
             }
         }
     ) { innerPadding ->
-        if (uiState.years.isEmpty()) {
-            Box(
-                modifier = modifier.padding(innerPadding).fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No receipts found. Tap + to add PDF.")
-            }
-        } else {
-            LazyColumn(
-                modifier = modifier.padding(innerPadding),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                uiState.years.forEach { yearData ->
+        Column(modifier = modifier.padding(innerPadding)) {
+            OutlinedTextField(
+                value = uiState.familyName,
+                onValueChange = { viewModel.setFamilyName(it) },
+                label = { Text("Family Name (姓)") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            if (uiState.years.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No receipts found. Tap + to add PDF.")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    uiState.years.forEach { yearData ->
                     stickyHeader {
                         Text(
                             text = yearData.year.toString(),
@@ -107,30 +136,31 @@ fun HomeScreen(
                 }
             }
         }
-        
-        if (uiState.isGenerating) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+
+            if (uiState.isGenerating) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
-        }
-        
-        if (uiState.error != null) {
-            AlertDialog(
-                onDismissRequest = { /* Clear error? */ },
-                confirmButton = { TextButton(onClick = { /* Clear error */ }) { Text("OK") } },
-                title = { Text("Error") },
-                text = { Text(uiState.error!!) }
-            )
+
+            if (uiState.error != null) {
+                AlertDialog(
+                    onDismissRequest = { /* Clear error? */ },
+                    confirmButton = { TextButton(onClick = { /* Clear error */ }) { Text("OK") } },
+                    title = { Text("Error") },
+                    text = { Text(uiState.error!!) }
+                )
+            }
         }
     }
 }
 
 @Composable
 fun ReceiptItem(
-    receipt: ReceiptEntity,
+    receipt: ReceiptDisplayItem,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -149,11 +179,11 @@ fun ReceiptItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = receipt.sitterName,
+                    text = receipt.childNames.ifEmpty { "Unknown" },
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "¥${receipt.amount}",
+                    text = "¥${receipt.amount} • ${receipt.sitterNames}",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
