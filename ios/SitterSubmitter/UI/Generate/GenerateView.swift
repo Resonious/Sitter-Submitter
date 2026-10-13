@@ -55,7 +55,7 @@ private struct ChildCard: View {
         VStack(alignment: .leading, spacing: 0) {
             Text(verbatim: childData.childName)
                 .font(.title2)
-            Text(verbatim: "利用\(childData.details.count)回 • ¥\(childData.totalAmount)")
+            Text(verbatim: "利用\(childData.details.count)回 • \(childData.totalAmount.formatted(.yen))")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 

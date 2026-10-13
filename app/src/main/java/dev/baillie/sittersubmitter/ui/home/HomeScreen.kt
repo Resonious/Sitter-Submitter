@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.baillie.sittersubmitter.ui.AppViewModelProvider
+import dev.baillie.sittersubmitter.ui.formatYen
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -188,7 +189,7 @@ fun ReceiptItem(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "¥${receipt.amount} • ${receipt.sitterNames}",
+                    text = "${formatYen(receipt.amount)} • ${receipt.sitterNames}",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(

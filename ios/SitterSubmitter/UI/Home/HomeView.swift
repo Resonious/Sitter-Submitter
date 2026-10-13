@@ -160,7 +160,7 @@ private struct ReceiptItem: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: receipt.childNames.isEmpty ? "不明" : receipt.childNames)
                         .font(.body)
-                    Text(verbatim: "¥\(receipt.amount) • \(receipt.sitterNames)")
+                    Text(verbatim: "\(receipt.amount.formatted(.yen)) • \(receipt.sitterNames)")
                         .font(.subheadline)
                     Text(verbatim: receipt.originalFileName)
                         .font(.caption)

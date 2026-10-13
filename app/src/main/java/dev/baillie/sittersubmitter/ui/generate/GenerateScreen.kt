@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.baillie.sittersubmitter.ui.AppViewModelProvider
+import dev.baillie.sittersubmitter.ui.formatYen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +70,7 @@ fun GenerateScreen(
                                 style = MaterialTheme.typography.titleLarge
                             )
                             Text(
-                                text = "利用${childData.details.size}回 • ¥${childData.totalAmount}",
+                                text = "利用${childData.details.size}回 • ${formatYen(childData.totalAmount)}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
