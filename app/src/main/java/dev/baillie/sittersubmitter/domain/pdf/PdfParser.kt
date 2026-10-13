@@ -70,14 +70,14 @@ For each data row, extract:
 - endTime: from 終了時刻 column (HH:MM format)
 - sitterName: from シッター名 column (full name)
 - childName: from お子さま column - this contains the child's name followed by 様 and age in parentheses. Extract ONLY the single character or short name before 様. For example if the cell shows "杏 様 (0歳6ヶ月)" extract just "杏". Do NOT include 様, age, or any text from adjacent columns.
-- amount: from お支払い額 column (rightmost, integer, no commas)
+- amount: the childcare fee covered by the subsidy, as an integer with no commas. If the table has a 助成対象金額 column, use that. Otherwise use 保育料（非課税） + 保育料（税込10%） - 割引額. Never include 交通費, オプション料, 特別費用 or キャンセル料, so do NOT use the お支払い額 column.
 
 Return JSON: {"entries":[{"date":"YYYY/MM/DD","startTime":"HH:MM","endTime":"HH:MM","sitterName":"Name","childName":"Child","amount":1234}]}
         """.trim()
 
         // Build request JSON for Responses API (supports PDFs natively)
         val requestJson = JsonObject().apply {
-            addProperty("model", "gpt-4o")
+            addProperty("model", "gpt-6.1-sol")
             add("input", gson.toJsonTree(listOf(
                 mapOf(
                     "role" to "user",
