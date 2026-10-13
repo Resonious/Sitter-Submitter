@@ -184,10 +184,10 @@
 				};
 			};
 			buildConfigurationList = 5E0000000000000000000060 /* Build configuration list for PBXProject "SitterSubmitter" */;
-			developmentRegion = en;
+			developmentRegion = ja;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				ja,
 				Base,
 			);
 			mainGroup = 5E0000000000000000000002;
@@ -381,7 +381,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SitterSubmitter/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Sitter Submitter";
+				INFOPLIST_KEY_CFBundleDisplayName = "シッター申請";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -410,7 +410,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SitterSubmitter/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Sitter Submitter";
+				INFOPLIST_KEY_CFBundleDisplayName = "シッター申請";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -2,9 +2,11 @@
 
 A SwiftUI port of the Android app in this repository, with the same screens and behavior:
 
-- **Home**: receipts grouped by year and month. Tap receipts to select them, then **Generate**. The trash button deletes the selection and ✕ clears it (Android uses the back button for that).
+- **Home** (シッター申請): receipts grouped by year and month. Tap receipts to select them, then **内訳表を作成** (create the breakdown form). The trash button deletes the selection and ✕ clears it (Android uses the back button for that).
 - **Adding receipts**: the **+** button picks a PDF; PDFs can also be opened in or shared to the app from Files, Mail, Safari and so on. OpenAI reads the sessions out of the PDF, and the PDF and the sessions are stored in SQLite.
-- **Generate Submission**: one card per child. Generating fills in the official template (`SitterSubmitter/Resources/template.xlsx`) and previews it, from where it can be printed, saved or opened in Numbers or Excel.
+- **内訳表の作成** (generate submission): one card per child. Generating fills in the official template (`SitterSubmitter/Resources/template.xlsx`) and previews it, from where it can be printed, saved or opened in Numbers or Excel.
+
+Like the Android app, the UI is Japanese only. The project's development language is Japanese as well, so the buttons and messages iOS adds to the app (Cancel, Close, system error descriptions) are Japanese whatever the device language. The document picker's contents are the exception: iOS draws them in another process, in the device's language.
 
 ## Setup
 

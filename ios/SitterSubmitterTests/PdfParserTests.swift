@@ -123,7 +123,7 @@ struct PdfParserTests {
         }
         #expect(
             PdfParserError.apiError(statusCode: 401, body: body).localizedDescription
-                == "OpenAI API error: 401 - \(body)"
+                == "OpenAI APIエラー（401）：\(body)"
         )
     }
 
@@ -145,7 +145,7 @@ struct PdfParserTests {
         await #expect(throws: PdfParserError.noEntries) {
             try await Self.parser(body: Self.reply(#"{"entries":[]}"#)).parse(Data())
         }
-        #expect(PdfParserError.noEntries.localizedDescription == "No valid receipt entries found in PDF.")
+        #expect(PdfParserError.noEntries.localizedDescription == "PDFに有効な利用明細が見つかりませんでした。")
     }
 
     @Test func reportsMalformedEntries() async {

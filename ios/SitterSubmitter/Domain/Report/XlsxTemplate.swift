@@ -228,10 +228,10 @@ enum TemplateError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .missingPart(let path): "The template is missing \(path)"
-        case .missingCell(let reference): "The template has no cell \(reference)"
-        case .notAFormula(let reference): "Cell \(reference) in the template has no formula"
-        case .malformed(let reason): "The template is malformed: \(reason)"
+        case .missingPart(let path): "テンプレートに \(path) がありません。"
+        case .missingCell(let reference): "テンプレートにセル \(reference) がありません。"
+        case .notAFormula(let reference): "テンプレートのセル \(reference) に数式がありません。"
+        case .malformed(let reason): "テンプレートの形式が正しくありません：\(reason)"
         }
     }
 }

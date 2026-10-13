@@ -174,21 +174,21 @@ enum PdfParserError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey:
-            "No OpenAI API key is configured. Set OPENAI_API_KEY in ios/Config/Secrets.xcconfig and rebuild."
+            "OpenAIのAPIキーが設定されていません。ios/Config/Secrets.xcconfig に OPENAI_API_KEY を設定して、ビルドし直してください。"
         case .emptyResponse:
-            "Empty response from OpenAI API"
+            "OpenAI APIから空の応答が返されました。"
         case let .apiError(statusCode, body):
-            "OpenAI API error: \(statusCode) - \(body)"
+            "OpenAI APIエラー（\(statusCode)）：\(body)"
         case .noContent(let body):
-            "No content in OpenAI response: \(body)"
+            "OpenAIの応答に内容がありません：\(body)"
         case .noJsonObject(let content):
-            "No valid JSON object found in response: \(content)"
+            "応答に有効なJSONが見つかりません：\(content)"
         case .unreadableEntries(let json):
-            "Could not read receipt entries from response: \(json)"
+            "応答から利用明細を読み取れません：\(json)"
         case .noEntries:
-            "No valid receipt entries found in PDF."
+            "PDFに有効な利用明細が見つかりませんでした。"
         case .invalidDate(let date):
-            "Invalid date in receipt entry: \(date)"
+            "利用明細の日付が正しくありません：\(date)"
         }
     }
 }

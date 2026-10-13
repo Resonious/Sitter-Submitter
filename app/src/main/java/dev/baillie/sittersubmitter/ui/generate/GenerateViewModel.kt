@@ -49,7 +49,7 @@ class GenerateViewModel(
             val ids = idsString.split(",").mapNotNull { it.toIntOrNull() }
             loadDetails(ids)
         } else {
-            _uiState.value = _uiState.value.copy(isLoading = false, error = "No receipts selected")
+            _uiState.value = _uiState.value.copy(isLoading = false, error = "領収書が選択されていません。")
         }
     }
 
@@ -66,7 +66,7 @@ class GenerateViewModel(
                 val children = allDetails.groupBy { it.childName }
                     .map { (childName, details) ->
                         ChildData(
-                            childName = childName.ifEmpty { "Unknown" },
+                            childName = childName.ifEmpty { "不明" },
                             details = details,
                             totalAmount = details.sumOf { it.amount }
                         )
@@ -78,7 +78,10 @@ class GenerateViewModel(
                     children = children
                 )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = listOfNotNull("領収書を読み込めませんでした。", e.message).joinToString("\n")
+                )
             }
         }
     }
@@ -88,13 +91,13 @@ class GenerateViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val childData = _uiState.value.children.find { it.childName == childName }
-                    ?: throw IllegalArgumentException("Child not found")
+                    ?: throw IllegalArgumentException("お子さまが見つかりません。")
 
                 val file = withContext(Dispatchers.IO) {
                     val familyName = sharedPreferences.getString(KEY_FAMILY_NAME, "") ?: ""
                     val fullName = if (familyName.isNotEmpty()) "$familyName $childName" else childName
                     val safeName = childName.replace(Regex("[^a-zA-Z0-9\\u3040-\\u30FF\\u4E00-\\u9FFF]"), "_")
-                    val outputFile = File(outputDir, "submission_${safeName}_${System.currentTimeMillis()}.xlsx")
+                    val outputFile = File(outputDir, "利用内容内訳表_${safeName}_${System.currentTimeMillis()}.xlsx")
                     reportGenerator.generate(childData.details, fullName, outputFile)
                     outputFile
                 }
@@ -104,7 +107,10 @@ class GenerateViewModel(
                     generatedChildName = childName
                 )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = "Generation failed: ${e.message}")
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = listOfNotNull("内訳表を作成できませんでした。", e.message).joinToString("\n")
+                )
             }
         }
     }

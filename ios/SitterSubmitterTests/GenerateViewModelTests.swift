@@ -51,7 +51,7 @@ struct GenerateViewModelTests {
 
         #expect(!viewModel.isLoading)
         #expect(viewModel.error == nil)
-        #expect(viewModel.children.map(\.childName) == ["Unknown", "杏", "陽"])
+        #expect(viewModel.children.map(\.childName) == ["不明", "杏", "陽"])
         // In the order the receipts were selected.
         #expect(viewModel.children[1].details.map(\.day) == [5, 7, 12])
         #expect(viewModel.children.map(\.totalAmount) == [1000, 37700, 5000])
@@ -63,7 +63,7 @@ struct GenerateViewModelTests {
         await viewModel.load()
 
         #expect(!viewModel.isLoading)
-        #expect(viewModel.error == "No receipts selected")
+        #expect(viewModel.error == "領収書が選択されていません。")
     }
 
     @Test func generatesOneChildsSubmission() async throws {
@@ -79,7 +79,7 @@ struct GenerateViewModelTests {
         #expect(viewModel.generatedChildName == "杏")
         let file = try #require(viewModel.generatedFileURL)
         #expect(file.deletingLastPathComponent().standardizedFileURL == outputDirectory.standardizedFileURL)
-        #expect(file.lastPathComponent.wholeMatch(of: /submission_杏_\d{13}\.xlsx/) != nil)
+        #expect(file.lastPathComponent.wholeMatch(of: /利用内容内訳表_杏_\d{13}\.xlsx/) != nil)
 
         let workbook = try XlsxTemplate(data: Data(contentsOf: file))
         #expect(workbook.value(at: "F4") == .string("ベイリー 杏"))
@@ -95,11 +95,11 @@ struct GenerateViewModelTests {
         let viewModel = makeViewModel(receiptIds: [receipts.december])
         await viewModel.load()
 
-        await viewModel.generateReport(forChild: "Unknown")
+        await viewModel.generateReport(forChild: "不明")
 
         let workbook = try XlsxTemplate(data: Data(contentsOf: #require(viewModel.generatedFileURL)))
-        #expect(workbook.value(at: "F4") == .string("Unknown"))
-        #expect(viewModel.generatedFileURL?.lastPathComponent.hasPrefix("submission_Unknown_") == true)
+        #expect(workbook.value(at: "F4") == .string("不明"))
+        #expect(viewModel.generatedFileURL?.lastPathComponent.hasPrefix("利用内容内訳表_不明_") == true)
     }
 
     @Test func showsWhatWentWrongWhenGenerationFails() async throws {
@@ -110,7 +110,7 @@ struct GenerateViewModelTests {
 
         await viewModel.generateReport(forChild: "杏")
 
-        #expect(viewModel.error?.hasPrefix("Generation failed: ") == true)
+        #expect(viewModel.error?.hasPrefix("内訳表を作成できませんでした。\n") == true)
         #expect(viewModel.generatedFileURL == nil)
         #expect(!viewModel.isLoading)
     }
@@ -122,7 +122,7 @@ struct GenerateViewModelTests {
 
         await viewModel.generateReport(forChild: "誰")
 
-        #expect(viewModel.error == "Generation failed: Child not found")
+        #expect(viewModel.error == "内訳表を作成できませんでした。\nお子さまが見つかりません。")
     }
 
     @Test(arguments: [

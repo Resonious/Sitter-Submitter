@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.baillie.sittersubmitter.ui.AppViewModelProvider
@@ -51,15 +52,15 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     if (uiState.selectedReceiptIds.isNotEmpty()) {
-                        Text("${uiState.selectedReceiptIds.size} selected")
+                        Text("${uiState.selectedReceiptIds.size}件選択中")
                     } else {
-                        Text("Sitter Submitter")
+                        Text("シッター申請")
                     }
                 },
                 actions = {
                     if (uiState.selectedReceiptIds.isNotEmpty()) {
                         IconButton(onClick = { viewModel.deleteSelected() }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete selected")
+                            Icon(Icons.Default.Delete, contentDescription = "選択した領収書を削除")
                         }
                     }
                 }
@@ -70,13 +71,13 @@ fun HomeScreen(
                 ExtendedFloatingActionButton(
                     onClick = onGenerateClick,
                     icon = { Icon(Icons.Default.CheckCircle, contentDescription = null) },
-                    text = { Text("Generate (${uiState.selectedReceiptIds.size})") }
+                    text = { Text("内訳表を作成（${uiState.selectedReceiptIds.size}）") }
                 )
             } else {
                 FloatingActionButton(
                     onClick = { launcher.launch(arrayOf("application/pdf")) }
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Receipt")
+                    Icon(Icons.Default.Add, contentDescription = "領収書を追加")
                 }
             }
         }
@@ -85,7 +86,7 @@ fun HomeScreen(
             OutlinedTextField(
                 value = uiState.familyName,
                 onValueChange = { viewModel.setFamilyName(it) },
-                label = { Text("Family Name (姓)") },
+                label = { Text("姓") },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -97,7 +98,11 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No receipts found. Tap + to add PDF.")
+                    Text(
+                        "領収書がありません。\n＋をタップしてPDFを追加してください。",
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        textAlign = TextAlign.Center
+                    )
                 }
             } else {
                 LazyColumn(
@@ -107,7 +112,7 @@ fun HomeScreen(
                     uiState.years.forEach { yearData ->
                     stickyHeader {
                         Text(
-                            text = yearData.year.toString(),
+                            text = "${yearData.year}年",
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
@@ -119,7 +124,7 @@ fun HomeScreen(
                     yearData.months.forEach { monthData ->
                         item {
                             Text(
-                                text = "${monthData.month}月", // Japanese suffix for Month, or localized?
+                                text = "${monthData.month}月",
                                 modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.primary
@@ -150,7 +155,7 @@ fun HomeScreen(
                 AlertDialog(
                     onDismissRequest = { /* Clear error? */ },
                     confirmButton = { TextButton(onClick = { /* Clear error */ }) { Text("OK") } },
-                    title = { Text("Error") },
+                    title = { Text("エラー") },
                     text = { Text(uiState.error!!) }
                 )
             }
@@ -179,7 +184,7 @@ fun ReceiptItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = receipt.childNames.ifEmpty { "Unknown" },
+                    text = receipt.childNames.ifEmpty { "不明" },
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
@@ -193,7 +198,7 @@ fun ReceiptItem(
                 )
             }
             if (isSelected) {
-                Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.CheckCircle, contentDescription = "選択済み", tint = MaterialTheme.colorScheme.primary)
             }
         }
     }

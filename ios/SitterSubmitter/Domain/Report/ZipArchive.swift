@@ -261,9 +261,9 @@ enum ZipError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .malformed(let reason): "Invalid ZIP archive: \(reason)"
-        case .unsupported(let reason): "Unsupported ZIP archive: \(reason)"
-        case .tooLarge: "ZIP archive is too large"
+        case .malformed(let reason): "ZIPファイルの形式が正しくありません：\(reason)"
+        case .unsupported(let reason): "対応していないZIPファイルです：\(reason)"
+        case .tooLarge: "ZIPファイルが大きすぎます。"
         }
     }
 }

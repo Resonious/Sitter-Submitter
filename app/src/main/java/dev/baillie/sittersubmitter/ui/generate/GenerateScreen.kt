@@ -39,10 +39,10 @@ fun GenerateScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Generate Submission") },
+                title = { Text("内訳表の作成") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "戻る")
                     }
                 }
             )
@@ -69,7 +69,7 @@ fun GenerateScreen(
                                 style = MaterialTheme.typography.titleLarge
                             )
                             Text(
-                                text = "${childData.details.size} sessions • ¥${childData.totalAmount}",
+                                text = "利用${childData.details.size}回 • ¥${childData.totalAmount}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -83,7 +83,7 @@ fun GenerateScreen(
                             }
                             if (childData.details.size > 3) {
                                 Text(
-                                    text = "... and ${childData.details.size - 3} more",
+                                    text = "…ほか${childData.details.size - 3}回",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -101,8 +101,8 @@ fun GenerateScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    if (uiState.isLoading) "Generating..."
-                                    else "Generate XLSX for ${childData.childName}"
+                                    if (uiState.isLoading) "作成中…"
+                                    else "${childData.childName}の内訳表を作成"
                                 )
                             }
                         }

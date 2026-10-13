@@ -73,8 +73,8 @@ class HomeViewModel(
             ReceiptDisplayItem(
                 id = rwd.receipt.id,
                 amount = rwd.receipt.amount,
-                sitterNames = rwd.details.map { it.sitterName }.distinct().joinToString(", "),
-                childNames = rwd.details.map { it.childName }.distinct().joinToString(", "),
+                sitterNames = rwd.details.map { it.sitterName }.distinct().joinToString("、"),
+                childNames = rwd.details.map { it.childName }.distinct().joinToString("、"),
                 originalFileName = rwd.receipt.originalFileName
             ) to rwd.receipt
         }
@@ -132,12 +132,12 @@ class HomeViewModel(
                 }
 
                 if (parsed == null) {
-                    _error.value = "Failed to parse PDF"
+                    _error.value = "領収書を追加できませんでした。\nPDFを開けませんでした。"
                     return@launch
                 }
 
                 // 2. Get filename
-                val fileName = getFileName(uri) ?: "unknown.pdf"
+                val fileName = getFileName(uri) ?: "名称未設定.pdf"
 
                 // 3. Add to Repo (Repo handles file copy)
                 // We need to modify repository to accept details
@@ -182,7 +182,7 @@ class HomeViewModel(
                 
                 _error.value = null
             } catch (e: Exception) {
-                _error.value = "Error adding receipt: ${e.message}"
+                _error.value = listOfNotNull("領収書を追加できませんでした。", e.message).joinToString("\n")
                 e.printStackTrace()
             } finally {
                 _isGenerating.value = false
@@ -224,7 +224,7 @@ class HomeViewModel(
                     _selectedReceiptIds.value = emptySet()
                 }
             } catch (e: Exception) {
-                _error.value = "Error deleting receipts: ${e.message}"
+                _error.value = listOfNotNull("領収書を削除できませんでした。", e.message).joinToString("\n")
             }
         }
     }

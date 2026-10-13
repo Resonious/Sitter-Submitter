@@ -9,7 +9,7 @@ struct HomeView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TextField("Family Name (姓)", text: Binding(get: { viewModel.familyName }, set: { viewModel.setFamilyName($0) }))
+            TextField("姓", text: Binding(get: { viewModel.familyName }, set: { viewModel.setFamilyName($0) }))
                 .textFieldStyle(.roundedBorder)
                 .textContentType(.familyName)
                 .autocorrectionDisabled()
@@ -18,8 +18,10 @@ struct HomeView: View {
                 .padding(.vertical, 8)
 
             if viewModel.years.isEmpty {
-                Text("No receipts found. Tap + to add PDF.")
+                Text("領収書がありません。\n＋をタップしてPDFを追加してください。")
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 receiptList
@@ -31,12 +33,12 @@ struct HomeView: View {
             if !viewModel.selectedReceiptIds.isEmpty {
                 // Android clears the selection with the back button.
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Clear selection", systemImage: "xmark") {
+                    Button("選択を解除", systemImage: "xmark") {
                         viewModel.clearSelection()
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Delete selected", systemImage: "trash", role: .destructive) {
+                    Button("選択した領収書を削除", systemImage: "trash", role: .destructive) {
                         Task { await viewModel.deleteSelected() }
                     }
                 }
@@ -57,7 +59,7 @@ struct HomeView: View {
                 }
             }
         }
-        .alert("Error", isPresented: isShowingError) {
+        .alert("エラー", isPresented: isShowingError) {
             Button("OK") { viewModel.dismissError() }
         } message: {
             Text(verbatim: viewModel.error ?? "")
@@ -77,7 +79,7 @@ struct HomeView: View {
     }
 
     private var title: String {
-        viewModel.selectedReceiptIds.isEmpty ? "Sitter Submitter" : "\(viewModel.selectedReceiptIds.count) selected"
+        viewModel.selectedReceiptIds.isEmpty ? "シッター申請" : "\(viewModel.selectedReceiptIds.count)件選択中"
     }
 
     private var isShowingError: Binding<Bool> {
@@ -103,7 +105,7 @@ struct HomeView: View {
                             }
                         }
                     } header: {
-                        Text(verbatim: String(yearData.year))
+                        Text(verbatim: "\(yearData.year)年")
                             .font(.headline)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(8)
@@ -129,12 +131,12 @@ struct HomeView: View {
                     .shadow(radius: 4, y: 2)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Add Receipt")
+            .accessibilityLabel("領収書を追加")
         } else {
             Button {
                 onGenerateClick(viewModel.selectedReceiptIds)
             } label: {
-                Label("Generate (\(viewModel.selectedReceiptIds.count))", systemImage: "checkmark.circle.fill")
+                Label("内訳表を作成（\(viewModel.selectedReceiptIds.count)）", systemImage: "checkmark.circle.fill")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
@@ -156,7 +158,7 @@ private struct ReceiptItem: View {
         Button(action: onClick) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: receipt.childNames.isEmpty ? "Unknown" : receipt.childNames)
+                    Text(verbatim: receipt.childNames.isEmpty ? "不明" : receipt.childNames)
                         .font(.body)
                     Text(verbatim: "¥\(receipt.amount) • \(receipt.sitterNames)")
                         .font(.subheadline)
@@ -168,7 +170,7 @@ private struct ReceiptItem: View {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Color.accentColor)
-                        .accessibilityLabel("Selected")
+                        .accessibilityLabel("選択済み")
                 }
             }
             .padding(16)

@@ -51,7 +51,7 @@ struct HomeViewModelTests {
         #expect(viewModel.years[0].months[0].receipts[0] == ReceiptDisplayItem(
             id: november,
             amount: 36400,
-            sitterNames: "高野 あみい, 早川明日香",
+            sitterNames: "高野 あみい、早川明日香",
             childNames: "杏",
             originalFileName: "november.pdf"
         ))
@@ -88,7 +88,7 @@ struct HomeViewModelTests {
         #expect(viewModel.years.map(\.year) == [2025])
         #expect(viewModel.years[0].months.map(\.month) == [11])
         #expect(item.amount == 22100)
-        #expect(item.sitterNames == "高野 あみい, 早川明日香")
+        #expect(item.sitterNames == "高野 あみい、早川明日香")
         #expect(item.originalFileName == "「はじめて」を応援する _ ポピンズシッター(5).pdf")
 
         let stored = try #require(await repository.getAllReceipts().first)
@@ -102,7 +102,7 @@ struct HomeViewModelTests {
 
         await viewModel.addReceipt(from: try makePdf(named: "empty.pdf"))
 
-        #expect(viewModel.error == "Error adding receipt: No valid receipt entries found in PDF.")
+        #expect(viewModel.error == "領収書を追加できませんでした。\nPDFに有効な利用明細が見つかりませんでした。")
         #expect(!viewModel.isGenerating)
         #expect(viewModel.years.isEmpty)
         #expect(try await repository.getAllReceipts().isEmpty)
@@ -120,7 +120,7 @@ struct HomeViewModelTests {
 
         await viewModel.addReceipt(from: directory.appendingPathComponent("missing.pdf"))
 
-        #expect(viewModel.error?.hasPrefix("Error adding receipt: ") == true)
+        #expect(viewModel.error?.hasPrefix("領収書を追加できませんでした。\n") == true)
         #expect(!viewModel.isGenerating)
     }
 

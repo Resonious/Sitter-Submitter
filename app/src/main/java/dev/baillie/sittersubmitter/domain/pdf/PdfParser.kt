@@ -5,12 +5,14 @@ import android.util.Log
 import com.google.gson.Gson
 import dev.baillie.sittersubmitter.BuildConfig
 import com.google.gson.JsonObject
+import com.google.gson.JsonParseException
 import com.google.gson.JsonParser
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
@@ -36,6 +38,8 @@ class PdfParser {
     companion object {
         private const val TAG = "PdfParser"
         private const val OPENAI_API_URL = "https://api.openai.com/v1/responses"
+        // Instead of the system's untranslated messages for being offline, timeouts and so on
+        private const val CONNECTION_ERROR = "OpenAIに接続できませんでした。インターネット接続を確認してください。"
     }
 
     private val client = OkHttpClient.Builder()
@@ -106,16 +110,23 @@ Return JSON: {"entries":[{"date":"YYYY/MM/DD","startTime":"HH:MM","endTime":"HH:
             .post(jsonBody.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val response = client.newCall(request).execute()
+        val response = try {
+            client.newCall(request).execute()
+        } catch (e: IOException) {
+            throw IOException(CONNECTION_ERROR, e)
+        }
 
-        val responseBody = response.body?.string()
-            ?: throw RuntimeException("Empty response from OpenAI API")
+        val responseBody = try {
+            response.body?.string()
+        } catch (e: IOException) {
+            throw IOException(CONNECTION_ERROR, e)
+        } ?: throw RuntimeException("OpenAI APIから空の応答が返されました。")
 
         Log.d(TAG, "Response code: ${response.code}")
 
         if (!response.isSuccessful) {
             Log.e(TAG, "API Error: $responseBody")
-            throw RuntimeException("OpenAI API error: ${response.code} - $responseBody")
+            throw RuntimeException("OpenAI APIエラー（${response.code}）：$responseBody")
         }
 
         Log.d(TAG, "Response body: $responseBody")
@@ -142,7 +153,7 @@ Return JSON: {"entries":[{"date":"YYYY/MM/DD","startTime":"HH:MM","endTime":"HH:
         }
 
         if (content == null) {
-            throw RuntimeException("No content in OpenAI response: $responseBody")
+            throw RuntimeException("OpenAIの応答に内容がありません：$responseBody")
         }
 
         Log.d(TAG, "GPT content: $content")
@@ -153,18 +164,28 @@ Return JSON: {"entries":[{"date":"YYYY/MM/DD","startTime":"HH:MM","endTime":"HH:
         Log.d(TAG, "Cleaned content: $content")
 
         // Parse the JSON response from GPT
-        val extractedData = gson.fromJson(content, ExtractedReceiptData::class.java)
+        val extractedData = try {
+            gson.fromJson(content, ExtractedReceiptData::class.java)
+        } catch (e: JsonParseException) {
+            throw IllegalArgumentException("応答から利用明細を読み取れません：$content", e)
+        }
 
         if (extractedData.entries.isEmpty()) {
-            throw IllegalArgumentException("No valid receipt entries found in PDF.")
+            throw IllegalArgumentException("PDFに有効な利用明細が見つかりませんでした。")
         }
 
         val details = extractedData.entries.map { entry ->
             val dateParts = entry.date.split("/")
+            val year = dateParts.getOrNull(0)?.toIntOrNull()
+            val month = dateParts.getOrNull(1)?.toIntOrNull()
+            val day = dateParts.getOrNull(2)?.toIntOrNull()
+            if (year == null || month == null || day == null) {
+                throw IllegalArgumentException("利用明細の日付が正しくありません：${entry.date}")
+            }
             ParsedReceiptDetail(
-                year = dateParts[0].toInt(),
-                month = dateParts[1].toInt(),
-                day = dateParts[2].toInt(),
+                year = year,
+                month = month,
+                day = day,
                 startTime = entry.startTime,
                 endTime = entry.endTime,
                 sitterName = entry.sitterName,
@@ -185,7 +206,7 @@ Return JSON: {"entries":[{"date":"YYYY/MM/DD","startTime":"HH:MM","endTime":"HH:
         val start = content.indexOf('{')
         val end = content.lastIndexOf('}')
         if (start == -1 || end == -1 || end <= start) {
-            throw IllegalArgumentException("No valid JSON object found in response: $content")
+            throw IllegalArgumentException("応答に有効なJSONが見つかりません：$content")
         }
         return content.substring(start, end + 1)
     }

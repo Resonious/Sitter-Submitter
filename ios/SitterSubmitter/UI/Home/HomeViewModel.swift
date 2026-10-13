@@ -87,7 +87,7 @@ final class HomeViewModel {
             let parsed = try await pdfParser.parse(pdfData)
 
             // 2. Get filename
-            let fileName = url.lastPathComponent.isEmpty ? "unknown.pdf" : url.lastPathComponent
+            let fileName = url.lastPathComponent.isEmpty ? "名称未設定.pdf" : url.lastPathComponent
 
             // 3. Add to repository (which stores a copy of the PDF)
             let totalAmount = parsed.details.reduce(0) { $0 + $1.amount }
@@ -116,7 +116,7 @@ final class HomeViewModel {
             error = nil
             await reload()
         } catch {
-            self.error = "Error adding receipt: \(error.localizedDescription)"
+            self.error = "領収書を追加できませんでした。\n\(error.localizedDescription)"
         }
         isGenerating = false
     }
@@ -129,7 +129,7 @@ final class HomeViewModel {
             selectedReceiptIds = []
             await reload()
         } catch {
-            self.error = "Error deleting receipts: \(error.localizedDescription)"
+            self.error = "領収書を削除できませんでした。\n\(error.localizedDescription)"
         }
     }
 
@@ -142,7 +142,7 @@ final class HomeViewModel {
             guard reload == latestReload else { return } // Superseded by a newer reload
             years = Self.groupByYearAndMonth(receipts)
         } catch {
-            self.error = "Error loading receipts: \(error.localizedDescription)"
+            self.error = "領収書を読み込めませんでした。\n\(error.localizedDescription)"
         }
     }
 
@@ -168,8 +168,8 @@ final class HomeViewModel {
         ReceiptDisplayItem(
             id: receipt.receipt.id,
             amount: receipt.receipt.amount,
-            sitterNames: receipt.details.map(\.sitterName).distinct().joined(separator: ", "),
-            childNames: receipt.details.map(\.childName).distinct().joined(separator: ", "),
+            sitterNames: receipt.details.map(\.sitterName).distinct().joined(separator: "、"),
+            childNames: receipt.details.map(\.childName).distinct().joined(separator: "、"),
             originalFileName: receipt.receipt.originalFileName
         )
     }

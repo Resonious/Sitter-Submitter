@@ -26,7 +26,7 @@ struct GenerateView: View {
                 }
             }
         }
-        .navigationTitle("Generate Submission")
+        .navigationTitle("内訳表の作成")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.load()
@@ -34,7 +34,7 @@ struct GenerateView: View {
         // "Open" the spreadsheet, as Android does with ACTION_VIEW. The preview can share, print or
         // open it in Numbers/Excel.
         .quickLookPreview($viewModel.generatedFileURL)
-        .alert("Error", isPresented: isShowingError) {
+        .alert("エラー", isPresented: isShowingError) {
             Button("OK") { viewModel.dismissError() }
         } message: {
             Text(verbatim: viewModel.error ?? "")
@@ -55,7 +55,7 @@ private struct ChildCard: View {
         VStack(alignment: .leading, spacing: 0) {
             Text(verbatim: childData.childName)
                 .font(.title2)
-            Text(verbatim: "\(childData.details.count) sessions • ¥\(childData.totalAmount)")
+            Text(verbatim: "利用\(childData.details.count)回 • ¥\(childData.totalAmount)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -65,7 +65,7 @@ private struct ChildCard: View {
                         .font(.footnote)
                 }
                 if childData.details.count > 3 {
-                    Text(verbatim: "... and \(childData.details.count - 3) more")
+                    Text(verbatim: "…ほか\(childData.details.count - 3)回")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -73,7 +73,7 @@ private struct ChildCard: View {
             .padding(.top, 8)
 
             Button(action: onGenerate) {
-                Text(verbatim: isLoading ? "Generating..." : "Generate XLSX for \(childData.childName)")
+                Text(verbatim: isLoading ? "作成中…" : "\(childData.childName)の内訳表を作成")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)

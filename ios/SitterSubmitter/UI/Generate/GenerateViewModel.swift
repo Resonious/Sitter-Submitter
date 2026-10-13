@@ -43,7 +43,7 @@ final class GenerateViewModel {
         hasLoaded = true
         guard !receiptIds.isEmpty else {
             isLoading = false
-            error = "No receipts selected"
+            error = "領収書が選択されていません。"
             return
         }
         do {
@@ -54,7 +54,7 @@ final class GenerateViewModel {
             children = Self.groupByChild(allDetails)
             error = nil
         } catch {
-            self.error = error.localizedDescription
+            self.error = "領収書を読み込めませんでした。\n\(error.localizedDescription)"
         }
         isLoading = false
     }
@@ -68,13 +68,13 @@ final class GenerateViewModel {
             let familyName = userDefaults.string(forKey: HomeViewModel.familyNameKey) ?? ""
             let fullName = familyName.isEmpty ? childName : "\(familyName) \(childName)"
             let outputURL = outputDirectory.appendingPathComponent(
-                "submission_\(Self.safeFileName(childName))_\(Int64(Date().timeIntervalSince1970 * 1000)).xlsx"
+                "利用内容内訳表_\(Self.safeFileName(childName))_\(Int64(Date().timeIntervalSince1970 * 1000)).xlsx"
             )
             try await Self.generate(with: reportGenerator, details: childData.details, childName: fullName, outputURL: outputURL)
             generatedFileURL = outputURL
             generatedChildName = childName
         } catch {
-            self.error = "Generation failed: \(error.localizedDescription)"
+            self.error = "内訳表を作成できませんでした。\n\(error.localizedDescription)"
         }
         isLoading = false
     }
@@ -89,7 +89,7 @@ final class GenerateViewModel {
             .groupedInOrder { $0.childName }
             .map { childName, details in
                 ChildData(
-                    childName: childName.isEmpty ? "Unknown" : childName,
+                    childName: childName.isEmpty ? "不明" : childName,
                     details: details,
                     totalAmount: details.reduce(0) { $0 + $1.amount }
                 )
@@ -128,7 +128,7 @@ enum GenerateError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .childNotFound: "Child not found"
+        case .childNotFound: "お子さまが見つかりません。"
         }
     }
 }

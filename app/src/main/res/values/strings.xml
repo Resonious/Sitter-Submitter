@@ -1,3 +1,3 @@
-<resources>
-    <string name="app_name">Sitter Submitter</string>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="ja">
+    <string name="app_name">シッター申請</string>
 </resources>
