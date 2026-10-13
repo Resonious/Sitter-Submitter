@@ -1,0 +1,7 @@
+// Settings shared by every target.
+
+// Read by PdfParser through Info.plist. Set it in Secrets.xcconfig (git-ignored, see Secrets.xcconfig.example);
+// the Android app reads the same key from local.properties.
+OPENAI_API_KEY =
+
+#include? "Secrets.xcconfig"

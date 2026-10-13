@@ -14,3 +14,7 @@
 .cxx
 local.properties
 *.apk
+
+# iOS
+ios/Config/Secrets.xcconfig
+xcuserdata/
